@@ -1,11 +1,14 @@
 FROM php:7.2-fpm-alpine3.7
 LABEL maintainer="jeffrey@vandenborne.co"
 
+ARG UID=1000
+ARG GID=1000
+
 # Sources: https://github.com/docker-library/wordpress
 
 # docker-entrypoint.sh dependencies
 RUN set -xe \
-    && apk add --no-cache bash sed
+    && apk add --no-cache sed su-exec
 
 # Install PHP extensions
 RUN set -xe \
@@ -33,12 +36,13 @@ RUN set -xe \
 		echo 'opcache.revalidate_freq=2'; \
 		echo 'opcache.fast_shutdown=1'; \
 		echo 'opcache.enable_cli=1'; \
-	} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+	} > /usr/local/etc/php/conf.d/opcache-recommended.ini \
+    && sed -E -i 's/www\-data:x:82:82/www-data:x:'$UID':'$GID'/g' /etc/passwd
 
 ENV APP_ROOT="/usr/src/app"
 WORKDIR ${APP_ROOT}
 
-COPY docker-entrypoint.sh /usr/local/bin
-ENTRYPOINT [ "docker-entrypoint.sh" ]
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+ENTRYPOINT [ "docker-entrypoint" ]
 
 CMD [ "php-fpm" ]
